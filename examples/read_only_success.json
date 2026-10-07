@@ -1,0 +1,20 @@
+{
+  "run_id": "example-success",
+  "task": "summarize synthetic fixture",
+  "capabilities": [
+    {"name": "fixture.read", "access": "read", "requires_human_approval": false}
+  ],
+  "max_iterations": 2,
+  "max_provider_calls": 4,
+  "script": {
+    "candidates": [
+      {
+        "objective": "summarize synthetic fixture",
+        "requested_capabilities": [{"name": "fixture.read", "access": "read"}],
+        "payload": {"summary": "synthetic fixture accepted"}
+      }
+    ],
+    "reviews": [{"status": "pass", "reason": "bounded synthetic result"}]
+  },
+  "expected": {"state": "verified", "code": "verified", "iterations": 1, "provider_calls": 2}
+}

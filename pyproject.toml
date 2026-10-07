@@ -1,0 +1,12 @@
+[project]
+name = "ai-workflow-runtime-lab"
+version = "0.1.0"
+description = "Clean-room deterministic proof of bounded AI workflow authority and auditability."
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.runtime-lab]
+default-max-iterations = 2
+default-max-provider-calls = 4
+hard-max-iterations = 4
+hard-max-provider-calls = 8
