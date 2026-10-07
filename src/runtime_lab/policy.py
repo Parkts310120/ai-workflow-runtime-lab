@@ -52,7 +52,8 @@ class AuthorityPolicy:
             if approval is None:
                 return AuthorityDecision(False, "human_approval_required", requires_human=True)
             if not approval.approved:
-                return AuthorityDecision(False, "human_rejected")
+                return AuthorityDecision(False, "human_rejected", requires_human=True)
+            return AuthorityDecision(True, "allowed", requires_human=True)
 
         return AuthorityDecision(True, "allowed")
 
