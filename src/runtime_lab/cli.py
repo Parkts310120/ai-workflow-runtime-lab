@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 from runtime_lab.ledger import InMemoryEventLedger, JsonlEventLedger
-from runtime_lab.scenario import run_scenario
+from runtime_lab.scenario import ScenarioValidationError, run_scenario
 
 
 def main() -> int:
@@ -15,7 +15,12 @@ def main() -> int:
     args = parser.parse_args()
 
     ledger = JsonlEventLedger(args.ledger) if args.ledger else InMemoryEventLedger()
-    summary = run_scenario(args.scenario, ledger=ledger)
+    try:
+        summary = run_scenario(args.scenario, ledger=ledger)
+    except ScenarioValidationError as exc:
+        print(json.dumps({"error": "scenario_validation_error", "code": exc.code}, sort_keys=True))
+        return 2
+
     print(json.dumps(summary, indent=2, sort_keys=True))
     return 0 if summary["matches_expected"] else 1
 
