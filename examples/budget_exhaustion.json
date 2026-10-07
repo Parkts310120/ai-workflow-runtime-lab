@@ -1,0 +1,12 @@
+{
+  "run_id": "example-budget-exhaustion",
+  "task": "summarize synthetic fixture",
+  "capabilities": [],
+  "max_iterations": 1,
+  "max_provider_calls": 4,
+  "script": {
+    "candidates": [{"objective": "summarize synthetic fixture"}],
+    "reviews": [{"status": "revise", "reason": "request one more bounded iteration"}]
+  },
+  "expected": {"state": "budget_exhausted", "code": "iteration_budget_exhausted", "iterations": 1, "provider_calls": 2}
+}

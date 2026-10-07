@@ -1,0 +1,17 @@
+{
+  "run_id": "example-authority-denial",
+  "task": "summarize synthetic fixture",
+  "capabilities": [],
+  "max_iterations": 2,
+  "max_provider_calls": 4,
+  "script": {
+    "candidates": [
+      {
+        "objective": "summarize synthetic fixture",
+        "requested_capabilities": [{"name": "fixture.read", "access": "read"}]
+      }
+    ],
+    "reviews": []
+  },
+  "expected": {"state": "authority_denied", "code": "undeclared_capability", "iterations": 1, "provider_calls": 1}
+}
