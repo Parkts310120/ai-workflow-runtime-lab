@@ -7,20 +7,47 @@ from typing import Any
 from runtime_lab.approvals import ApprovalStore
 from runtime_lab.engine import WorkflowEngine
 from runtime_lab.ledger import EventLedger, InMemoryEventLedger
-from runtime_lab.models import AccessLevel, ApprovalRecord, Candidate, CapabilityDeclaration, CapabilityRequest, ReviewStatus, ReviewVerdict, RunSpec
+from runtime_lab.models import AccessLevel, Candidate, CapabilityDeclaration, CapabilityRequest, ReviewStatus, ReviewVerdict, RunSpec
 from runtime_lab.providers import ScriptedProvider
 
 
-def run_scenario(path: str | Path, ledger: EventLedger | None = None) -> dict[str, Any]:
-    scenario = json.loads(Path(path).read_text(encoding="utf-8"))
-    spec = _parse_spec(scenario)
-    provider = ScriptedProvider(
-        candidates=[_parse_candidate(item) for item in scenario["script"]["candidates"]],
-        reviews=[_parse_review(item) for item in scenario["script"]["reviews"]],
-    )
-    approvals = _parse_approvals(scenario.get("approvals", []))
+class ScenarioValidationError(ValueError):
+    def __init__(self, code: str) -> None:
+        super().__init__(code)
+        self.code = code
+
+
+def run_scenario(
+    path: str | Path,
+    ledger: EventLedger | None = None,
+    approvals: ApprovalStore | None = None,
+) -> dict[str, Any]:
+    try:
+        scenario = json.loads(Path(path).read_text(encoding="utf-8"))
+        if not isinstance(scenario, dict):
+            raise ScenarioValidationError("scenario_must_be_object")
+        if "approvals" in scenario:
+            raise ScenarioValidationError("scenario_approval_not_allowed")
+
+        expected = scenario.get("expected")
+        if not isinstance(expected, dict) or not expected:
+            raise ScenarioValidationError("expected_contract_required")
+
+        spec = _parse_spec(scenario)
+        script = scenario["script"]
+        provider = ScriptedProvider(
+            candidates=[_parse_candidate(item) for item in script["candidates"]],
+            reviews=[_parse_review(item) for item in script["reviews"]],
+        )
+        run_id = scenario["run_id"]
+    except ScenarioValidationError:
+        raise
+    except (json.JSONDecodeError, KeyError, TypeError, ValueError, OSError):
+        raise ScenarioValidationError("invalid_scenario") from None
+
     actual_ledger = ledger or InMemoryEventLedger()
-    result = WorkflowEngine().run(spec, provider, actual_ledger, approvals=approvals, run_id=scenario["run_id"])
+    approval_store = approvals or ApprovalStore()
+    result = WorkflowEngine().run(spec, provider, actual_ledger, approvals=approval_store, run_id=run_id)
     summary: dict[str, Any] = {
         "run_id": result.run_id,
         "state": result.state.value,
@@ -28,7 +55,6 @@ def run_scenario(path: str | Path, ledger: EventLedger | None = None) -> dict[st
         "iterations": result.iterations,
         "provider_calls": result.provider_calls,
     }
-    expected = scenario.get("expected", {})
     summary["matches_expected"] = all(summary.get(key) == value for key, value in expected.items())
     if isinstance(actual_ledger, InMemoryEventLedger):
         summary["events"] = [event.to_record() for event in actual_ledger.events]
@@ -67,18 +93,3 @@ def _parse_candidate(item: dict[str, Any]) -> Candidate:
 
 def _parse_review(item: dict[str, Any]) -> ReviewVerdict:
     return ReviewVerdict(status=ReviewStatus(item["status"]), reason=item.get("reason", ""))
-
-
-def _parse_approvals(items: list[dict[str, Any]]) -> ApprovalStore:
-    store = ApprovalStore()
-    for item in items:
-        store.add(
-            ApprovalRecord(
-                run_id=item["run_id"],
-                capability=item["capability"],
-                access=AccessLevel(item.get("access", "read")),
-                approved=bool(item["approved"]),
-                approver=item["approver"],
-            )
-        )
-    return store
